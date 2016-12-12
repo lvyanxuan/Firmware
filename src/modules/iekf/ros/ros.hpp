@@ -36,7 +36,7 @@ namespace ros
 class Node;
 class Rate;
 class Subscriber;
-class Publishder;
+class Publisher;
 class Callback;
 class CallbackInterface;
 
@@ -161,12 +161,13 @@ public:
 		}
 
 		if (_sub.updated()) {
-			_sub.update();
-			(_objPtr->*_callbackFuncPtr)(&(_sub.get()));
+			MsgType msg;
+			_sub.update(&msg);
+			(_objPtr->*_callbackFuncPtr)(&msg);
 		}
 	}
 private:
-	uORB::Subscription<MsgType> _sub;
+	uORB::SubscriptionTiny _sub;
 	void (ObjType::*_callbackFuncPtr)(const MsgType *msg);
 	ObjType *_objPtr;
 };
