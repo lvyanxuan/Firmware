@@ -28,7 +28,21 @@ IEKF::IEKF() :
 	_x(X::accel_scale) = 1;
 
 	// initialize covariance
-	_P.setIdentity();
+	_P(Xe::rot_bx, Xe::rot_bx) = 1e-2f;
+	_P(Xe::rot_by, Xe::rot_by) = 1e-2f;
+	_P(Xe::rot_bz, Xe::rot_bz) = 1e-2f;
+	_P(Xe::vel_n, Xe::vel_n) = 1;
+	_P(Xe::vel_e, Xe::vel_e) = 1;
+	_P(Xe::vel_d, Xe::vel_d) = 1;
+	_P(Xe::gyro_bias_n, Xe::gyro_bias_n) = 1e-2f;
+	_P(Xe::gyro_bias_e, Xe::gyro_bias_e) = 1e-2f;
+	_P(Xe::gyro_bias_d, Xe::gyro_bias_d) = 1e-2f;
+	_P(Xe::accel_scale, Xe::accel_scale) = 1;
+	_P(Xe::pos_n, Xe::pos_n) = 1;
+	_P(Xe::pos_e, Xe::pos_e) = 1;
+	_P(Xe::pos_d, Xe::pos_d) = 1;
+	_P(Xe::terrain_alt, Xe::terrain_alt) = 1;
+	_P(Xe::baro_bias, Xe::baro_bias) = 1;
 
 	// initial magnetic field guess
 	_B_n = Vector3f(0.21523, 0.00771, -0.42741);
@@ -94,9 +108,9 @@ void IEKF::callback_accel(const sensor_accel_s *msg)
 
 	// define R
 	Matrix<float, Y_accel::n, Y_accel::n> R;
-	R(Y_accel::accel_bx, Y_accel::accel_bx) = 1.0;
-	R(Y_accel::accel_by, Y_accel::accel_by) = 1.0;
-	R(Y_accel::accel_bz, Y_accel::accel_bz) = 1.0;
+	R(Y_accel::accel_bx, Y_accel::accel_bx) = 100.0;
+	R(Y_accel::accel_by, Y_accel::accel_by) = 100.0;
+	R(Y_accel::accel_bz, Y_accel::accel_bz) = 100.0;
 
 	// define H
 	Matrix<float, Y_accel::n, Xe::n> H;
@@ -129,9 +143,9 @@ void IEKF::callback_mag(const sensor_mag_s *msg)
 
 	// define R
 	Matrix<float, Y_mag::n, Y_mag::n> R;
-	R(Y_mag::mag_n, Y_mag::mag_n) = 1.0;
-	R(Y_mag::mag_e, Y_mag::mag_e) = 1.0;
-	R(Y_mag::mag_d, Y_mag::mag_d) = 1000.0; // prevents mag from correcting roll/pitch
+	R(Y_mag::mag_n, Y_mag::mag_n) = 100;
+	R(Y_mag::mag_e, Y_mag::mag_e) = 100;
+	R(Y_mag::mag_d, Y_mag::mag_d) = 10000.0; // prevents mag from correcting roll/pitch
 
 	// define H
 	Matrix<float, Y_mag::n, Xe::n> H;
@@ -230,21 +244,21 @@ void IEKF::predict(float dt)
 {
 	// define process noise matrix
 	Matrix<float, Xe::n, Xe::n> Q;
-	Q(Xe::rot_bx, Xe::rot_bx) = 1;
-	Q(Xe::rot_by, Xe::rot_by) = 1;
-	Q(Xe::rot_bz, Xe::rot_bz) = 1;
-	Q(Xe::vel_n, Xe::vel_n) = 1;
-	Q(Xe::vel_e, Xe::vel_e) = 1;
-	Q(Xe::vel_d, Xe::vel_d) = 1;
-	Q(Xe::gyro_bias_n, Xe::gyro_bias_n) = 1;
-	Q(Xe::gyro_bias_e, Xe::gyro_bias_e) = 1;
-	Q(Xe::gyro_bias_d, Xe::gyro_bias_d) = 1;
-	Q(Xe::accel_scale, Xe::accel_scale) = 1;
-	Q(Xe::pos_n, Xe::pos_n) = 1;
-	Q(Xe::pos_e, Xe::pos_e) = 1;
-	Q(Xe::pos_d, Xe::pos_d) = 1;
-	Q(Xe::terrain_alt, Xe::terrain_alt) = 1;
-	Q(Xe::baro_bias, Xe::baro_bias) = 1;
+	Q(Xe::rot_bx, Xe::rot_bx) = 1e-1f;
+	Q(Xe::rot_by, Xe::rot_by) = 1e-1f;
+	Q(Xe::rot_bz, Xe::rot_bz) = 1e-1f;
+	Q(Xe::vel_n, Xe::vel_n) = 1e-2f;
+	Q(Xe::vel_e, Xe::vel_e) = 1e-2f;
+	Q(Xe::vel_d, Xe::vel_d) = 1e-2f;
+	Q(Xe::gyro_bias_n, Xe::gyro_bias_n) = 5e-3f;
+	Q(Xe::gyro_bias_e, Xe::gyro_bias_e) = 5e-3f;
+	Q(Xe::gyro_bias_d, Xe::gyro_bias_d) = 5e-3f;
+	Q(Xe::accel_scale, Xe::accel_scale) = 1e-2f;
+	Q(Xe::pos_n, Xe::pos_n) = 1e-2f;
+	Q(Xe::pos_e, Xe::pos_e) = 1e-2f;
+	Q(Xe::pos_d, Xe::pos_d) = 1e-2f;
+	Q(Xe::terrain_alt, Xe::terrain_alt) = 1e-1f;
+	Q(Xe::baro_bias, Xe::baro_bias) = 1e-1f;
 
 	// define A matrix
 	Matrix<float, Xe::n, Xe::n> A;
