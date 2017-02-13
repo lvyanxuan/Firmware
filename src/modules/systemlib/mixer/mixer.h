@@ -177,6 +177,13 @@ public:
 	virtual unsigned		mix(float *outputs, unsigned space, uint16_t *status_reg) = 0;
 
 	/**
+	 * Get the saturation status.
+	 *
+	 * @return			Integer bitmask containing saturation_status from multirotor_motor_limits.msg .
+	 */
+	virtual uint16_t		get_saturation_status(void) = 0;
+
+	/**
 	 * Analyses the mix configuration and updates a bitmask of groups
 	 * that are required.
 	 *
@@ -192,7 +199,19 @@ public:
 	 */
 	virtual void 			set_max_delta_out_once(float delta_out_max) {};
 
+	/**
+	 * @brief Set trim offset for this mixer
+	 *
+	 * @return the number of outputs this mixer feeds to
+	 */
 	virtual unsigned set_trim(float trim) = 0;
+
+	/*
+	 * @brief      Sets the thrust factor used to calculate mapping from desired thrust to pwm.
+	 *
+	 * @param[in]  val   The value
+	 */
+	virtual void 			set_thrust_factor(float val) {};
 
 protected:
 	/** client-supplied callback used when fetching control values */
@@ -243,6 +262,11 @@ protected:
 	 */
 	static const char 		*skipline(const char *buf, unsigned &buflen);
 
+	/**
+	 * Check wether the string is well formed and suitable for parsing
+	 */
+	static bool				string_well_formed(const char *buf, unsigned &buflen);
+
 private:
 
 	/* do not allow to copy due to pointer data members */
@@ -261,6 +285,7 @@ public:
 	~MixerGroup();
 
 	virtual unsigned		mix(float *outputs, unsigned space, uint16_t *status_reg);
+	virtual uint16_t		get_saturation_status(void);
 	virtual void			groups_required(uint32_t &groups);
 
 	/**
@@ -359,6 +384,13 @@ public:
 		return 0;
 	}
 
+	/**
+	 * @brief      Sets the thrust factor used to calculate mapping from desired thrust to pwm.
+	 *
+	 * @param[in]  val   The value
+	 */
+	virtual void	set_thrust_factor(float val);
+
 private:
 	Mixer				*_first;	/**< linked list of mixers */
 
@@ -394,6 +426,7 @@ public:
 	static NullMixer		*from_text(const char *buf, unsigned &buflen);
 
 	virtual unsigned		mix(float *outputs, unsigned space, uint16_t *status_reg);
+	virtual uint16_t		get_saturation_status(void);
 	virtual void			groups_required(uint32_t &groups);
 	virtual void 			set_offset(float trim) {};
 	unsigned set_trim(float trim)
@@ -465,6 +498,7 @@ public:
 			uint16_t max);
 
 	virtual unsigned		mix(float *outputs, unsigned space, uint16_t *status_reg);
+	virtual uint16_t		get_saturation_status(void);
 	virtual void			groups_required(uint32_t &groups);
 
 	/**
@@ -504,13 +538,13 @@ private:
 typedef unsigned int MultirotorGeometryUnderlyingType;
 enum class MultirotorGeometry : MultirotorGeometryUnderlyingType;
 
-	/**
-	 * Multi-rotor mixer for pre-defined vehicle geometries.
-	 *
-	 * Collects four inputs (roll, pitch, yaw, thrust) and mixes them to
-	 * a set of outputs based on the configured geometry.
-	 */
-	class __EXPORT MultirotorMixer : public Mixer
+/**
+ * Multi-rotor mixer for pre-defined vehicle geometries.
+ *
+ * Collects four inputs (roll, pitch, yaw, thrust) and mixes them to
+ * a set of outputs based on the configured geometry.
+ */
+class __EXPORT MultirotorMixer : public Mixer
 {
 public:
 	/**
@@ -571,6 +605,7 @@ public:
 			unsigned &buflen);
 
 	virtual unsigned		mix(float *outputs, unsigned space, uint16_t *status_reg);
+	virtual uint16_t		get_saturation_status(void);
 	virtual void			groups_required(uint32_t &groups);
 
 	/**
@@ -590,16 +625,42 @@ public:
 		return _rotor_count;
 	}
 
+	/**
+	 * @brief      Sets the thrust factor used to calculate mapping from desired thrust to pwm.
+	 *
+	 * @param[in]  val   The value
+	 */
+	virtual void			set_thrust_factor(float val) {_thrust_factor = val;}
+
 private:
 	float				_roll_scale;
 	float				_pitch_scale;
 	float				_yaw_scale;
 	float				_idle_speed;
-
 	float 				_delta_out_max;
+	float 				_thrust_factor;
+
 
 	orb_advert_t			_limits_pub;
 	multirotor_motor_limits_s 	_limits;
+
+	union {
+		struct {
+			uint16_t motor_pos	: 1; // 0 - true when any motor has saturated in the positive direction
+			uint16_t motor_neg	: 1; // 1 - true when any motor has saturated in the negative direction
+			uint16_t roll_pos	: 1; // 2 - true when a positive roll demand change will increase saturation
+			uint16_t roll_neg	: 1; // 3 - true when a negative roll demand change will increase saturation
+			uint16_t pitch_pos	: 1; // 4 - true when a positive pitch demand change will increase saturation
+			uint16_t pitch_neg	: 1; // 5 - true when a negative pitch demand change will increase saturation
+			uint16_t yaw_pos	: 1; // 6 - true when a positive yaw demand change will increase saturation
+			uint16_t yaw_neg	: 1; // 7 - true when a negative yaw demand change will increase saturation
+			uint16_t thrust_pos	: 1; // 8 - true when a positive thrust demand change will increase saturation
+			uint16_t thrust_neg	: 1; // 9 - true when a negative thrust demand change will increase saturation
+		} flags;
+		uint16_t value;
+	} _saturation_status;
+
+	void update_saturation_status(unsigned index, bool clipping_high, bool clipping_low);
 
 	unsigned			_rotor_count;
 	const Rotor			*_rotors;
@@ -676,6 +737,7 @@ public:
 	virtual unsigned		mix(float *outputs, unsigned space, uint16_t *status_reg);
 	virtual void			groups_required(uint32_t &groups);
 
+	virtual uint16_t		get_saturation_status(void) { return 0; }
 	unsigned set_trim(float trim)
 	{
 		return 4;

@@ -7,6 +7,9 @@
 # @output AUX1 feed-through of RC AUX1 channel
 # @output AUX2 feed-through of RC AUX2 channel
 #
+# @board px4fmu-v1 exclude
+# @board px4fmu-v2 exclude
+#
 # @maintainer Anton Matosov <anton.matosov@gmail.com>
 #
 
@@ -43,7 +46,7 @@ then
 	param set MC_TPA_BREAK_D 0.7
 	param set MC_TPA_RATE_P 0.5
 	param set MC_TPA_RATE_D 0.5
-	
+
 	param set PWM_MIN 1075
 	param set PWM_RATE 400
 	param set PWM_DISARMED 900
